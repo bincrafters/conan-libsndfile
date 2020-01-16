@@ -1,4 +1,4 @@
-from conans import ConanFile, tools, AutoToolsBuildEnvironment
+from conans import ConanFile, tools, AutoToolsBuildEnvironment, RunEnvironment
 import os
 
 
@@ -67,13 +67,14 @@ class LibnameConan(ConanFile):
         return self._autotools
 
     def build(self):
-        with tools.chdir(self._source_subfolder):
-            try:
-                autotools = self._configure_autotools()
-                autotools.make()
-            except:
-                self.output.info(open('config.log', errors='backslashreplace').read())
-                raise
+        with tools.environment_append(RunEnvironment(self).vars):
+            with tools.chdir(self._source_subfolder):
+                try:
+                    autotools = self._configure_autotools()
+                    autotools.make()
+                except:
+                    self.output.info(open('config.log', errors='backslashreplace').read())
+                    raise
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
