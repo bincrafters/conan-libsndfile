@@ -1,5 +1,6 @@
 from conans import ConanFile, tools, AutoToolsBuildEnvironment, RunEnvironment
 import os
+import shutil
 
 
 class LibnameConan(ConanFile):
@@ -23,7 +24,7 @@ class LibnameConan(ConanFile):
         "fPIC": True,
         "with_alsa": True,
         "with_sqlite": True,
-        "with_external_libs": False,
+        "with_external_libs": True,
         "libalsa:shared": True}
 
     _source_subfolder = "source_subfolder"
@@ -67,6 +68,8 @@ class LibnameConan(ConanFile):
         return self._autotools
 
     def build(self):
+        if self.options.with_external_libs:
+            shutil.copyfile('vorbis.pc', 'vorbisenc.pc')
         with tools.environment_append(RunEnvironment(self).vars):
             with tools.chdir(self._source_subfolder):
                 try:
