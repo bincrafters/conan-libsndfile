@@ -68,8 +68,12 @@ class LibnameConan(ConanFile):
 
     def build(self):
         with tools.chdir(self._source_subfolder):
-            autotools = self._configure_autotools()
-            autotools.make()
+            try:
+                autotools = self._configure_autotools()
+                autotools.make()
+            except:
+                self.output.info(open('config.log', errors='backslashreplace').read())
+                raise
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
