@@ -78,12 +78,13 @@ class LibnameConan(ConanFile):
     def build(self):
         if self.options.with_external_libs:
             shutil.copyfile('vorbis.pc', 'vorbisenc.pc')
-        try:
-            autotools = self._configure_autotools()
-            autotools.make()
-        except:
-            self.output.info(open('config.log', errors='backslashreplace').read())
-            raise
+        with tools.environment_append(RunEnvironment(self).vars):
+            try:
+                autotools = self._configure_autotools()
+                autotools.make()
+            except:
+                self.output.info(open('config.log', errors='backslashreplace').read())
+                raise
 
     def package(self):
         self.copy(pattern="COPYING", dst="licenses", src=self._source_subfolder)
