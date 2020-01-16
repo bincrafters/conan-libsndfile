@@ -1,6 +1,8 @@
 from conans import ConanFile, tools, AutoToolsBuildEnvironment, RunEnvironment
+from conans.errors import ConanInvalidConfiguration
 import os
 import shutil
+import glob
 
 
 class LibnameConan(ConanFile):
@@ -8,9 +10,8 @@ class LibnameConan(ConanFile):
     description = "Libsndfile is a library of C routines for reading and writing files containing sampled audio data."
     topics = ("conan", "libsndfile", "sound")
     url = "https://github.com/bincrafters/conan-libsndfile"
-    homepage = " http://www.mega-nerd.com/libsndfile"
-    license = "lgpl-3.0"
-
+    homepage = "http://www.mega-nerd.com/libsndfile"
+    license = "LGPL-2.1"
     generators = 'pkg_config'
     settings = "os", "arch", "compiler", "build_type"
     options = {
@@ -26,10 +27,11 @@ class LibnameConan(ConanFile):
         "with_sqlite": True,
         "with_external_libs": True,
         "libalsa:shared": True}
-
-    _source_subfolder = "source_subfolder"
-
     _autotools = None
+
+    @property
+    def _source_subfolder(self):
+        return "source_subfolder"
 
     def requirements(self):
         if self.options.with_alsa:
@@ -44,6 +46,12 @@ class LibnameConan(ConanFile):
     def config_options(self):
         if self.settings.os == 'Windows':
             del self.options.fPIC
+
+    def configure(self):
+        if self.settings.compiler == "Visual Studio":
+            raise ConanInvalidConfiguration("The project libsndfile can not be built by Visual Studio.")
+        del self.settings.compiler.libcxx
+        del self.settings.compiler.stdcpp
 
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])
@@ -64,27 +72,30 @@ class LibnameConan(ConanFile):
                 args.extend(['--enable-shared=yes', '--enable-static=no'])
             else:
                 args.extend(['--enable-shared=no', '--enable-static=yes'])
-            self._autotools.configure(args=args)
+            self._autotools.configure(args=args, configure_dir=self._source_subfolder)
         return self._autotools
 
     def build(self):
         if self.options.with_external_libs:
             shutil.copyfile('vorbis.pc', 'vorbisenc.pc')
-        with tools.environment_append(RunEnvironment(self).vars):
-            with tools.chdir(self._source_subfolder):
-                try:
-                    autotools = self._configure_autotools()
-                    autotools.make()
-                except:
-                    self.output.info(open('config.log', errors='backslashreplace').read())
-                    raise
+        try:
+            autotools = self._configure_autotools()
+            autotools.make()
+        except:
+            self.output.info(open('config.log', errors='backslashreplace').read())
+            raise
 
     def package(self):
-        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
-        with tools.chdir(self._source_subfolder):
-            autotools = self._configure_autotools()
-            autotools.install()
+        self.copy(pattern="COPYING", dst="licenses", src=self._source_subfolder)
+        autotools = self._configure_autotools()
+        autotools.install()
+        tools.rmdir(os.path.join(self.package_folder, "share"))
+        tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
+        for f in glob.glob(os.path.join(self.package_folder, "lib", "*.la")):
+            os.remove(f)
 
     def package_info(self):
         self.cpp_info.names['pkg_config'] = 'sndfile'
         self.cpp_info.libs = tools.collect_libs(self)
+        if self.settings.os == "Linux":
+            self.cpp_info.system_libs = ["m", "dl", "pthread", "rt"]
