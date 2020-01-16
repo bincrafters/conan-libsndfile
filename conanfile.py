@@ -1,29 +1,44 @@
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools, AutoToolsBuildEnvironment
 import os
 
 
 class LibnameConan(ConanFile):
-    name = "libname"
-    description = "Keep it short"
-    topics = ("conan", "libname", "logging")
-    url = "https://github.com/bincrafters/conan-libname"
-    homepage = "https://github.com/original_author/original_lib"
-    license = "MIT"  # Indicates license type of the packaged library; please use SPDX Identifiers https://spdx.org/licenses/
-    # Remove following lines if the target lib does not use CMake
-    exports_sources = ["CMakeLists.txt"]
-    generators = "cmake"
+    name = "libsndfile"
+    description = "Libsndfile is a library of C routines for reading and writing files containing sampled audio data."
+    topics = ("conan", "libsndfile", "sound")
+    url = "http://www.mega-nerd.com/libsndfile"
+    homepage = " http://www.mega-nerd.com/libsndfile"
+    license = "lgpl-3.0"
 
-    # Options may need to change depending on the packaged library
+    generators = 'pkg_config'
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+        "with_alsa": [True, False],
+        "with_sqlite": [True, False],
+        "with_external_libs": [True, False]}
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+        "with_alsa": True,
+        "with_sqlite": True,
+        "with_external_libs": False,
+        "libalsa:shared": True}
 
     _source_subfolder = "source_subfolder"
-    _build_subfolder = "build_subfolder"
 
-    requires = (
-        "zlib/1.2.11"
-    )
+    _autotools = None
+
+    def requirements(self):
+        if self.options.with_alsa:
+            self.requires("libalsa/1.1.9")
+        if self.options.with_sqlite:
+            self.requires("sqlite3/3.29.0")
+        if self.options.with_external_libs:
+            self.requires("flac/1.3.2@bincrafters/stable")
+            self.requires("ogg/1.3.4")
+            self.requires("vorbis/1.3.6@bincrafters/stable")
 
     def config_options(self):
         if self.settings.os == 'Windows':
@@ -34,29 +49,34 @@ class LibnameConan(ConanFile):
         extracted_dir = self.name + "-" + self.version
         os.rename(extracted_dir, self._source_subfolder)
 
-    def _configure_cmake(self):
-        cmake = CMake(self)
-        cmake.definitions["BUILD_TESTS"] = False  # example
-        cmake.configure(build_folder=self._build_subfolder)
-        return cmake
+    def _configure_autotools(self):
+        if not self._autotools:
+            self._autotools = AutoToolsBuildEnvironment(self)
+            args=["--without-caps"]
+            if not self.options.with_alsa:
+                args.append("--disable-alsa")
+            if not self.options.with_sqlite:
+                args.append("--disable-sqlite")
+            if not self.options.with_external_libs:
+                args.append("--disable-external-libs")
+            if self.options.shared:
+                args.extend(['--enable-shared=yes', '--enable-static=no'])
+            else:
+                args.extend(['--enable-shared=no', '--enable-static=yes'])
+            self._autotools.configure(args=args)
+        return self._autotools
 
     def build(self):
-        cmake = self._configure_cmake()
-        cmake.build()
+        with tools.chdir(self._source_subfolder):
+            autotools = self._configure_autotools()
+            autotools.make()
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
-        cmake = self._configure_cmake()
-        cmake.install()
-        # If the CMakeLists.txt has a proper install method, the steps below may be redundant
-        # If so, you can just remove the lines below
-        include_folder = os.path.join(self._source_subfolder, "include")
-        self.copy(pattern="*", dst="include", src=include_folder)
-        self.copy(pattern="*.dll", dst="bin", keep_path=False)
-        self.copy(pattern="*.lib", dst="lib", keep_path=False)
-        self.copy(pattern="*.a", dst="lib", keep_path=False)
-        self.copy(pattern="*.so*", dst="lib", keep_path=False)
-        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
+        with tools.chdir(self._source_subfolder):
+            autotools = self._configure_autotools()
+            autotools.install()
+
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)

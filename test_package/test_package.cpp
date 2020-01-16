@@ -1,7 +1,8 @@
 #include <iostream>
+#include "sndfile.h"
 
 int main()
 {
-    std::cout << "Bincrafters\n";
+    std::cout << sf_version_string() << "\n";
     return 0;
 }
