@@ -6,7 +6,7 @@ class LibnameConan(ConanFile):
     name = "libsndfile"
     description = "Libsndfile is a library of C routines for reading and writing files containing sampled audio data."
     topics = ("conan", "libsndfile", "sound")
-    url = "http://www.mega-nerd.com/libsndfile"
+    url = "https://github.com/bincrafters/conan-libsndfile"
     homepage = " http://www.mega-nerd.com/libsndfile"
     license = "lgpl-3.0"
 
@@ -52,7 +52,7 @@ class LibnameConan(ConanFile):
     def _configure_autotools(self):
         if not self._autotools:
             self._autotools = AutoToolsBuildEnvironment(self)
-            args=["--without-caps"]
+            args = ["--without-caps"]
             if not self.options.with_alsa:
                 args.append("--disable-alsa")
             if not self.options.with_sqlite:
@@ -81,7 +81,6 @@ class LibnameConan(ConanFile):
         with tools.chdir(self._source_subfolder):
             autotools = self._configure_autotools()
             autotools.install()
-
 
     def package_info(self):
         self.cpp_info.names['pkg_config'] = 'sndfile'
