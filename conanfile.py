@@ -51,6 +51,7 @@ class LibnameConan(ConanFile):
         if self.settings.compiler == "Visual Studio":
             raise ConanInvalidConfiguration("The project libsndfile can not be built by Visual Studio.")
         del self.settings.compiler.libcxx
+        del self.settings.compiler.cppstd
         del self.settings.compiler.stdcpp
 
     def source(self):
