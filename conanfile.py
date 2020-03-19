@@ -39,7 +39,7 @@ class LibnameConan(ConanFile):
         if self.options.with_sqlite:
             self.requires("sqlite3/3.29.0")
         if self.options.with_external_libs:
-            self.requires("flac/1.3.2@bincrafters/stable")
+            self.requires("flac/1.3.3")
             self.requires("ogg/1.3.4")
             self.requires("vorbis/1.3.6")
 
