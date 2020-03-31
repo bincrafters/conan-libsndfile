@@ -25,8 +25,7 @@ class LibnameConan(ConanFile):
         "fPIC": True,
         "with_alsa": True,
         "with_sqlite": True,
-        "with_external_libs": True,
-        "libalsa:shared": True}
+        "with_external_libs": True,}
     _autotools = None
 
     @property
@@ -52,7 +51,6 @@ class LibnameConan(ConanFile):
             raise ConanInvalidConfiguration("The project libsndfile can not be built by Visual Studio.")
         del self.settings.compiler.libcxx
         del self.settings.compiler.cppstd
-        del self.settings.compiler.stdcpp
 
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])
@@ -62,13 +60,12 @@ class LibnameConan(ConanFile):
     def _configure_autotools(self):
         if not self._autotools:
             self._autotools = AutoToolsBuildEnvironment(self)
-            args = ["--without-caps"]
-            if not self.options.with_alsa:
-                args.append("--disable-alsa")
-            if not self.options.with_sqlite:
-                args.append("--disable-sqlite")
-            if not self.options.with_external_libs:
-                args.append("--disable-external-libs")
+            args = [
+                "--without-caps",
+                "--enable-alsa" if self.options.with_alsa else "--disable-alsa",
+                "--enable-sqlite" if self.options.with_sqlite else "--disable-sqlite",
+                "--enable-external-libs" if self.options.with_external_libs else "--disable-external-libs",
+            ]
             if self.options.shared:
                 args.extend(['--enable-shared=yes', '--enable-static=no'])
             else:
@@ -80,12 +77,8 @@ class LibnameConan(ConanFile):
         if self.options.with_external_libs:
             shutil.copyfile('vorbis.pc', 'vorbisenc.pc')
         with tools.environment_append(RunEnvironment(self).vars):
-            try:
-                autotools = self._configure_autotools()
-                autotools.make()
-            except:
-                self.output.info(open('config.log', errors='backslashreplace').read())
-                raise
+            autotools = self._configure_autotools()
+            autotools.make()
 
     def package(self):
         self.copy(pattern="COPYING", dst="licenses", src=self._source_subfolder)
